@@ -99,6 +99,8 @@ def parse_args():
                         car, cat, chair, cow, diningtable, dog, horse, motorbike, \
                         person, pottedplant, sheep, sofa, train, tvmonitor',
                         help='string of comma separated names, or text filename')
+    parser.add_argument('--nomake', dest='make_image',type=int, default=0,
+                        help='makeimage=False or True default true')
     args = parser.parse_args()
     return args
 
@@ -146,7 +148,7 @@ if __name__ == '__main__':
       print (image_list)
       exit(1)
     image_list = [i.strip() for i in args.images.split(',')]
-    print (image_list)
+    #print (image_list)
     assert len(image_list) > 0, "No valid image specified to detect"
 
     network = None if args.deploy_net else args.network
@@ -162,4 +164,4 @@ if __name__ == '__main__':
                             ctx, len(class_names), args.nms_thresh, args.force_nms)
     # run detection
     detector.detect_and_visualize(image_list, args.dir, args.extension,
-                                  class_names, args.thresh, args.show_timer)
+                                  class_names, args.thresh, args.show_timer,args.make_image)

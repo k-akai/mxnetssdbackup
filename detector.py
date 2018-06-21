@@ -21,7 +21,7 @@ import numpy as np
 from timeit import default_timer as timer
 from dataset.testdb import TestDB
 from dataset.iterator import DetIter
-
+import json
 class Detector(object):
     """
     SSD detector which hold a detection network and wraps detection API
@@ -167,41 +167,78 @@ class Detector(object):
         print(imname)
         plt.savefig("out/"+name)
 
-    def writejson(self,im_list,dets,classes,thresh,width,height):
-        for i in range(dets.shape[0]):
-          cls_id = int(dets[i, 0])
-          if cls_id >= 0:
-              score = dets[i, 1]
-              if score < thresh:
-                continue
-              xmin =int(dets[i,2]*width)
-              ymin =int(dets[i,3]*height)
-              xmax =int(dets[i,4]*width)
-              ymax =int(dets[i,5]*height)
-              print (cls_id)
-              print(classes[cls_id])
-              print (score)
-              print(str(dets[i,2])+":"+str(dets[i,3])+":"+str(dets[i,4])+":"+str(dets[i,5]))
-              print (str(xmin)+":"+str(ymin)+":"+str(xmax)+":"+str(ymax))
-                #xmin = int(dets[i, 2] * width)
-                #ymin = int(dets[i, 3] * height)
-                #xmax = int(dets[i, 4] * width)
-                #ymax = int(dets[i, 5] * height)
-                #rect = plt.Rectangle((xmin, ymin), xmax - xmin,
-                #                         ymax - ymin, fill=False,
-                #                         edgecolor=colors[cls_id],
-                #                         linewidth=3.5)
-                #plt.gca().add_patch(rect)
-                #class_name = str(cls_id)
-                #if classes and len(classes) > cls_id:
-                #  class_name = classes[cls_id]
-                #plt.gca().text(xmin, ymin - 2,
-                #                    '{:s} {:.3f}'.format(class_name, score),
-                #                    bbox=dict(facecolor=colors[cls_id], alpha=0.5),
-                #                    fontsize=12, color='white')
-    
+    def writejson(self,imname,dets,classes,thresh,width,height,viewclass):
+
+      dictres={}
+      for i in range(dets.shape[0]):
+        cls_id = int(dets[i, 0])
+        if cls_id >= 0:
+          score = dets[i, 1]
+          if score < thresh:
+            continue
+          xmin =int(dets[i,2]*width)
+          ymin =int(dets[i,3]*height)
+          xmax =int(dets[i,4]*width)
+          ymax =int(dets[i,5]*height)
+#          print(classes[cls_id])
+#          print (score)
+          cls=classes[cls_id]
+          #print(str(dets[i,2])+":"+str(dets[i,3])+":"+str(dets[i,4])+":"+str(dets[i,5]))
+#          print (str(xmin)+":"+str(ymin)+":"+str(xmax)+":"+str(ymax))
+              
+          res=(score,xmin,ymin,xmax,ymax)
+          #if already add, append
+          if cls in dictres:
+             lis=dictres[cls]
+             lis.append(res)
+          else:
+             lis=[]
+             lis.append(res)
+             dictres[cls]=lis
+     
+      #if viewclass is None, view all class except dammy
+      vcls=""
+      
+      if viewclass == None:
+        for i in classes:
+          if i.find("dammy")==-1:
+            vcls=vcls+","+i
+      else:
+        vcls=viewclass
+#      print (vcls)
+      views=vcls.split(",")
+#      for i in views:
+#        if i in dictres:
+#          print ("dict:"+i+"=")
+#          print (dictres[i])
+#        else:
+#          print ("dict:"+i+"=no data")
+      
+      #make format
+      resj={}
+      resj["conf_thresh"]=thresh
+      resj["ground_truth"]="None"
+      resj["num_thresh"]=0
+      rlt={}
+      resj["result"]=rlt
+      for i in views:
+        if i =="":
+          continue
+        rlt[i]=[] 
+        if i in dictres:
+          datas=dictres[i]
+          for j in datas:
+            data=[j[1],j[2],j[3],j[4]]            
+            rlt[i].append({"bbox":data,"score":round(j[0],3)})
+      #print (resj)
+      name=imname.rsplit(".")[1].split("/")
+      name=name[len(name)-1]
+      #print(imname)
+      f=open("out/"+name+".json",'w')
+      json.dump(resj,f)   
+ 
     def detect_and_visualize(self, im_list, root_dir=None, extension=None,
-                             classes=[], thresh=0.6, show_timer=False, same=True):
+                             classes=[], thresh=0.6, show_timer=False, same=True,viewclass=None,make_image=None):
         """
         wrapper for im_detect and visualize_detection
 
@@ -232,7 +269,9 @@ class Detector(object):
               img=cv2.imread(im_list[k])
               height = img.shape[0]
               width = img.shape[1]
-            self.writejson(im_list[k],det,classes,thresh,width,height)
+            self.writejson(im_list[k],det,classes,thresh,width,height,viewclass)
+            if make_image!=0:
+              continue
             img = cv2.imread(im_list[k])
             img[:, :, (0, 1, 2)] = img[:, :, (2, 1, 0)]
             self.visualize_detection(im_list[k],img, det, classes, thresh)
