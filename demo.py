@@ -101,6 +101,9 @@ def parse_args():
                         help='string of comma separated names, or text filename')
     parser.add_argument('--nomake', dest='make_image',type=int, default=0,
                         help='makeimage=False or True default true')
+
+    parser.add_argument('--outputdir', dest='outputdir',type=str, default="out",
+                        help='save jsonfile dir')
     args = parser.parse_args()
     return args
 
@@ -138,16 +141,15 @@ if __name__ == '__main__':
         ctx = mx.gpu(args.gpu_id)
 
     # parse image list
-    
-    print(len(args.images.split('.')))
+
+    #print(len(args.images.split('.')))
     image_list = []
     if len(args.images.split('.')) <=1:
       print ("dir")
       #image_list=os.listdir(args.images)
       image_list = glob.glob(args.images+"/*")
-      print (image_list)
-      exit(1)
-    image_list = [i.strip() for i in args.images.split(',')]
+    else:
+      image_list = [i.strip() for i in args.images.split(',')]
     #print (image_list)
     assert len(image_list) > 0, "No valid image specified to detect"
 
@@ -163,5 +165,6 @@ if __name__ == '__main__':
                             (args.mean_r, args.mean_g, args.mean_b),
                             ctx, len(class_names), args.nms_thresh, args.force_nms)
     # run detection
-    detector.detect_and_visualize(image_list, args.dir, args.extension,
-                                  class_names, args.thresh, args.show_timer,args.make_image)
+
+    detector.detect_and_visualize(args.outputdir,args.make_image,image_list, args.dir, args.extension,
+                                  class_names, args.thresh, args.show_timer)

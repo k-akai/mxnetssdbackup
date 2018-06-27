@@ -162,12 +162,18 @@ class Detector(object):
                                     bbox=dict(facecolor=colors[cls_id], alpha=0.5),
                                     fontsize=12, color='white')
         plt.show()
-        name=imname.rsplit(".")[1].split("/")
+
+        name=imname.split(".")
+        if len(name)==2:
+          name=name[0]
+        else:
+          name=name[1]
+        name=name.split("/")
         name=name[len(name)-1]
         print(imname)
-        plt.savefig("out/"+name)
+        plt.savefig(os.path.join(outputdir,name))
 
-    def writejson(self,imname,dets,classes,thresh,width,height,viewclass):
+    def writejson(self,outputdir,imname,dets,classes,thresh,width,height,viewclass):
 
       dictres={}
       for i in range(dets.shape[0]):
@@ -185,7 +191,7 @@ class Detector(object):
           cls=classes[cls_id]
           #print(str(dets[i,2])+":"+str(dets[i,3])+":"+str(dets[i,4])+":"+str(dets[i,5]))
 #          print (str(xmin)+":"+str(ymin)+":"+str(xmax)+":"+str(ymax))
-              
+
           res=(score,xmin,ymin,xmax,ymax)
           #if already add, append
           if cls in dictres:
@@ -195,10 +201,10 @@ class Detector(object):
              lis=[]
              lis.append(res)
              dictres[cls]=lis
-     
+
       #if viewclass is None, view all class except dammy
       vcls=""
-      
+
       if viewclass == None:
         for i in classes:
           if i.find("dammy")==-1:
@@ -213,7 +219,7 @@ class Detector(object):
 #          print (dictres[i])
 #        else:
 #          print ("dict:"+i+"=no data")
-      
+
       #make format
       resj={}
       resj["conf_thresh"]=thresh
@@ -224,21 +230,26 @@ class Detector(object):
       for i in views:
         if i =="":
           continue
-        rlt[i]=[] 
+        rlt[i]=[]
         if i in dictres:
           datas=dictres[i]
           for j in datas:
-            data=[j[1],j[2],j[3],j[4]]            
+            data=[j[1],j[2],j[3],j[4]]
             rlt[i].append({"bbox":data,"score":round(j[0],3)})
       #print (resj)
-      name=imname.rsplit(".")[1].split("/")
+      name=imname.split(".")
+      if len(name)==2:
+        name=name[0]
+      else:
+        name=name[1]
+      name=name.split("/")
       name=name[len(name)-1]
       #print(imname)
-      f=open("out/"+name+".json",'w')
-      json.dump(resj,f)   
- 
-    def detect_and_visualize(self, im_list, root_dir=None, extension=None,
-                             classes=[], thresh=0.6, show_timer=False, same=True,viewclass=None,make_image=None):
+      f=open("out/"+name+"_result.json",'w')
+      json.dump(resj,f)
+
+    def detect_and_visualize(self,outputdir, make_image,im_list, root_dir=None, extension=None,
+                             classes=[], thresh=0.6, show_timer=False, same=True,viewclass=None):
         """
         wrapper for im_detect and visualize_detection
 
@@ -256,6 +267,8 @@ class Detector(object):
         ----------
 
         """
+        #print("check")
+        #print(make_image)
         import cv2
         dets = self.im_detect(im_list, root_dir, extension, show_timer=show_timer)
         if not isinstance(im_list, list):
@@ -264,13 +277,13 @@ class Detector(object):
         height=0
         width=0
         for k, det in enumerate(dets):
-            
+
             if k==0 or same ==False:
               img=cv2.imread(im_list[k])
               height = img.shape[0]
               width = img.shape[1]
-            self.writejson(im_list[k],det,classes,thresh,width,height,viewclass)
-            if make_image!=0:
+            self.writejson(outputdir,im_list[k],det,classes,thresh,width,height,viewclass)
+            if make_image==1:
               continue
             img = cv2.imread(im_list[k])
             img[:, :, (0, 1, 2)] = img[:, :, (2, 1, 0)]
